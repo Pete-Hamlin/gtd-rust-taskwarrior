@@ -42,7 +42,7 @@ However certain aspects of the methodology I find are not as easy to interact wi
     - The reason for this is that (for me) sub projects are dealt with just fine via taskwarrior. The parent project (in this example `shopping`) fits more in the horizon 3 category of GTD, which this tool is not aiming to implement (yet...?)
 - No duplicate projects are allowed
 - When a project is marked as completed, for `gtd` it no longer exists (i.e deleted). 
-    - History/reopening projects is handled fine by taskwarrior. The purpose of this piece is just to track ongoing projects (specifically those with no current next actions)
+    - History/reopening projects is handled fine by taskwarrior. The purpose of this piece is just to track ongoing projects (specifically those with no current next actions - which taskwarrior by default sees as completed)
 
 ## Config
 
