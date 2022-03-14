@@ -1,6 +1,7 @@
 #![recursion_limit = "1024"]
 
 use clap::Parser;
+use colored::*;
 use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io;
@@ -17,8 +18,13 @@ struct GtdConfig {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct Project {
-    id: usize,
     name: String,
+}
+
+struct ProjectListItem {
+    index: usize,
+    name: String,
+    tasks: i32,
 }
 
 #[derive(Parser)]
@@ -47,6 +53,7 @@ fn main() {
     match args.command.as_str() {
         "init" => init_projects(),
         "insert" => insert_project(args),
+        "remove" => remove_project(args),
         "list" => list_projects(),
         _ => println!("Subcommand {} not found", args.command),
     }
@@ -82,12 +89,12 @@ fn init_projects() -> () {
     String::from_utf8(output.stdout)
         .unwrap()
         .lines()
-        .for_each(|x| save_new_project(x.to_string()).unwrap());
+        .for_each(|x| add_project_item(x.to_string()).unwrap());
 }
 
 fn insert_project(args: Cli) -> () {
     if let Some(subcommand) = args.subcommand.as_deref() {
-        match save_new_project(subcommand.to_string()) {
+        match add_project_item(subcommand.to_string()) {
             Ok(p) => println!("Successfully added project {:?}", p),
             Err(e) => println!("Failed to add project {:?}", e),
         }
@@ -96,16 +103,29 @@ fn insert_project(args: Cli) -> () {
     }
 }
 
-fn save_new_project(project: String) -> io::Result<()> {
-    let cfg: GtdConfig = confy::load("gtd-rust").expect("Failed to load config");
+fn remove_project(args: Cli) -> () {
+    if let Some(subcommand) = args.subcommand.as_deref() {
+        match remove_project_item(subcommand.to_string()) {
+            Ok(p) => println!("Successfully removed project {:?}", p),
+            Err(e) => println!("Failed to add project {:?}", e),
+        }
+    } else {
+        println!("No project specified - Please provide a project name or run gtd --help for more details")
+    }
+}
+
+fn add_project_item(project: String) -> io::Result<()> {
     let mut projects = get_projects_list();
-    projects.push(Project {
-        id: 0,
-        name: project,
-    });
-    serde_json::to_writer(&File::create(cfg.storage_path)?, &projects)?;
-    sync_project_list(&mut projects)?;
+    projects.push(Project { name: project });
+    write_project_list(&projects)?;
     Ok(())
+}
+
+fn remove_project_item(project_id: String) -> io::Result<String> {
+    let mut projects = get_projects_list();
+    let project = projects.remove(project_id.parse::<usize>().unwrap());
+    write_project_list(&projects)?;
+    Ok(project.name)
 }
 
 fn get_projects_list() -> Vec<Project> {
@@ -115,17 +135,49 @@ fn get_projects_list() -> Vec<Project> {
     return serde_json::from_reader(file).expect("Error reading file");
 }
 
-fn sync_project_list(projects: &mut Vec<Project>) -> io::Result<()> {
+fn write_project_list(projects: &Vec<Project>) -> io::Result<()> {
     let cfg: GtdConfig = confy::load("gtd-rust").expect("Failed to load config");
-    // This follows the task approach where every item has id n, that udpates whenever a value is added/removed (i.e. n items will always have id 1-n)
-    let mut id = 1;
-    for mut project in projects.iter_mut() {
-        project.id = id;
-        println!("Project: {} - {}", project.id, project.name);
-        id += 1;
-    }
     serde_json::to_writer(&File::create(cfg.storage_path)?, &projects)?;
     Ok(())
 }
 
-fn list_projects() -> () {}
+fn list_projects() -> () {
+    let projects = get_projects_list();
+    let mut output = vec![];
+    for (index, project) in projects.iter().enumerate() {
+        let count = project_count(project).unwrap();
+        output.push(ProjectListItem {
+            index: index,
+            name: project.name.clone(),
+            tasks: count,
+        });
+    }
+    output.sort_by(|a, b| a.tasks.cmp(&b.tasks));
+    for item in output.iter() {
+        let text = format!(
+            "{} | {} - Has {} tasks remaining",
+            item.index, item.name, item.tasks
+        );
+        if item.tasks == 0 {
+            println!("{}", text.yellow());
+        } else {
+            println!("{}", text.green());
+        }
+    }
+}
+
+fn project_count(project: &Project) -> io::Result<i32> {
+    let cfg: GtdConfig = confy::load("gtd-rust").expect("Failed to load config");
+    let mut text = "pro:".to_string();
+    text = text + &project.name;
+    let output = Command::new(cfg.task_path)
+        .arg(text)
+        .arg("status:pending")
+        .arg("count")
+        .output()?;
+    let value: String = String::from_utf8(output.stdout)
+        .unwrap()
+        .split_whitespace()
+        .collect();
+    Ok(value.parse::<i32>().unwrap())
+}
