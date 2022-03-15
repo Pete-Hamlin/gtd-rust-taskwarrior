@@ -35,6 +35,10 @@ struct Cli {
     command: String,
     // Optional subcommand to work on
     subcommand: Option<String>,
+
+    // Display only projects without tasks
+    #[clap(short, long)]
+    short: bool,
 }
 
 impl ::std::default::Default for GtdConfig {
@@ -55,7 +59,7 @@ fn main() {
         "init" => init_projects(),
         "add" => insert_project(args),
         "rm" => remove_project(args),
-        "list" => list_projects(),
+        "list" => list_projects(args),
         "reset" => reset_projects(),
         _ => println!("Subcommand {} not found", args.command),
     }
@@ -151,7 +155,7 @@ fn write_project_list(projects: &Vec<Project>) -> io::Result<()> {
     Ok(())
 }
 
-fn list_projects() -> () {
+fn list_projects(args: Cli) -> () {
     let projects = get_projects_list();
     let mut output = vec![];
     for (index, project) in projects.iter().enumerate() {
@@ -170,7 +174,7 @@ fn list_projects() -> () {
         );
         if item.tasks == 0 {
             println!("{}", text.yellow());
-        } else {
+        } else if !args.short {
             println!("{}", text.green());
         }
     }
