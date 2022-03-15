@@ -197,7 +197,7 @@ fn project_count(project: &Project) -> io::Result<i32> {
     text = text + &project.name;
     let output = Command::new(cfg.task_path)
         .arg(text)
-        .arg("status:pending")
+        .arg("\\(status:waiting or status:pending\\)'")
         .arg("count")
         .output()?;
     let value: String = String::from_utf8(output.stdout)
