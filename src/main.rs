@@ -56,6 +56,7 @@ fn main() {
         "add" => insert_project(args),
         "rm" => remove_project(args),
         "list" => list_projects(),
+        "reset" => reset_projects(),
         _ => println!("Subcommand {} not found", args.command),
     }
 }
@@ -78,6 +79,11 @@ fn init_config() {
         };
         confy::store("gtd-rust", new_cfg).expect("Failed to load new config");
     }
+}
+
+fn reset_projects() {
+    let empty_vec = vec![];
+    write_project_list(&empty_vec).unwrap();
 }
 
 fn init_projects() -> () {

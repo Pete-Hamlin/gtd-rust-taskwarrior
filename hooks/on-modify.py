@@ -4,8 +4,12 @@ import sys
 import json
 import subprocess
 
-task = json.loads(sys.stdin.readline())
+_ = json.loads(sys.stdin.readline())
+new_task = json.loads(sys.stdin.readline())
+print(json.dumps(new_task))
 
-project = task.get("project")
+project = new_task.get("project")
 if project:
-    subprocess.run(['gtd','insert',project], check=True, stdout=subprocess.PIPE, universal_newlines=True)
+    subprocess.run(['gtd','add',project], check=True, stdout=subprocess.PIPE, universal_newlines=True)
+
+sys.exit(0)
