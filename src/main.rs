@@ -53,8 +53,8 @@ fn main() {
 
     match args.command.as_str() {
         "init" => init_projects(),
-        "insert" => insert_project(args),
-        "remove" => remove_project(args),
+        "add" => insert_project(args),
+        "rm" => remove_project(args),
         "list" => list_projects(),
         _ => println!("Subcommand {} not found", args.command),
     }
@@ -97,7 +97,7 @@ fn init_projects() -> () {
 fn insert_project(args: Cli) -> () {
     if let Some(subcommand) = args.subcommand.as_deref() {
         match add_project_item(subcommand.to_string()) {
-            Ok(p) => println!("Successfully added project {:?}", p),
+            Ok(_p) => println!("Successfully processed project"),
             Err(e) => println!("Failed to add project {:?}", e),
         }
     } else {
@@ -109,7 +109,7 @@ fn remove_project(args: Cli) -> () {
     if let Some(subcommand) = args.subcommand.as_deref() {
         match remove_project_item(subcommand.to_string()) {
             Ok(p) => println!("Successfully removed project {:?}", p),
-            Err(e) => println!("Failed to add project {:?}", e),
+            Err(e) => println!("Failed to remove project {:?}", e),
         }
     } else {
         println!("No project specified - Please provide a project name or run gtd --help for more details")
@@ -118,8 +118,10 @@ fn remove_project(args: Cli) -> () {
 
 fn add_project_item(project: String) -> io::Result<()> {
     let mut projects = get_projects_list();
-    projects.push(Project { name: project });
-    write_project_list(&projects)?;
+    if check_duplicates(&project) {
+        projects.push(Project { name: project });
+        write_project_list(&projects)?;
+    }
     Ok(())
 }
 
@@ -132,7 +134,6 @@ fn remove_project_item(project_id: String) -> io::Result<String> {
 
 fn get_projects_list() -> Vec<Project> {
     let cfg: GtdConfig = confy::load("gtd-rust").expect("Failed to load config");
-    println!("{}", cfg.storage_path);
     let file = File::open(cfg.storage_path)
         .expect("Project storage file not found - Check your config location");
     return serde_json::from_reader(file).expect("Error reading file");
@@ -167,6 +168,17 @@ fn list_projects() -> () {
             println!("{}", text.green());
         }
     }
+}
+
+fn check_duplicates(project_name: &str) -> bool {
+    let projects = get_projects_list();
+    for project in projects.iter() {
+        if project_name == project.name {
+            println!("{} already in project list - skipping", project_name);
+            return false;
+        }
+    }
+    return true;
 }
 
 fn project_count(project: &Project) -> io::Result<i32> {
