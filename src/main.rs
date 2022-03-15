@@ -3,6 +3,7 @@
 use clap::Parser;
 use colored::*;
 use serde::{Deserialize, Serialize};
+use std::env;
 use std::fs::File;
 use std::io;
 use std::process::Command;
@@ -69,9 +70,10 @@ fn init_config() {
             .arg("task")
             .status()
             .expect("Failed to find task binary - please set manually");
+        let storage_path = env::var("HOME").unwrap() + "/.task/projects.data";
         let new_cfg = GtdConfig {
             task_path: "task".into(),
-            storage_path: "./projects.json".into(),
+            storage_path: storage_path,
             initialized: true,
         };
         confy::store("gtd-rust", new_cfg).expect("Failed to load new config");
@@ -130,6 +132,7 @@ fn remove_project_item(project_id: String) -> io::Result<String> {
 
 fn get_projects_list() -> Vec<Project> {
     let cfg: GtdConfig = confy::load("gtd-rust").expect("Failed to load config");
+    println!("{}", cfg.storage_path);
     let file = File::open(cfg.storage_path)
         .expect("Project storage file not found - Check your config location");
     return serde_json::from_reader(file).expect("Error reading file");
