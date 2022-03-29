@@ -55,13 +55,17 @@ fn main() {
     init_config();
     let args = Cli::parse();
 
-    match args.command.as_str() {
-        "init" => init_projects(),
-        "add" => insert_project(args),
-        "rm" => remove_project(args),
-        "list" => list_projects(args),
-        "reset" => reset_projects(),
-        _ => println!("Subcommand {} not found", args.command),
+    if args.command.as_str().is_empty() {
+        list_projects(args)
+    } else {
+        match args.command.as_str() {
+            "init" => init_projects(),
+            "add" => insert_project(args),
+            "rm" => remove_project(args),
+            "list" => list_projects(args),
+            "reset" => reset_projects(),
+            _ => println!("Subcommand {} not found", args.command),
+        }
     }
 }
 
@@ -156,6 +160,7 @@ fn write_project_list(projects: &Vec<Project>) -> io::Result<()> {
 }
 
 fn list_projects(args: Cli) -> () {
+    check_context();
     let projects = get_projects_list();
     let mut output = vec![];
     for (index, project) in projects.iter().enumerate() {
@@ -177,6 +182,20 @@ fn list_projects(args: Cli) -> () {
         } else if !args.short {
             println!("{}", text.green());
         }
+    }
+}
+
+fn check_context() {
+    let cfg: GtdConfig = confy::load("gtd-rust").expect("Failed to load config");
+    let output = Command::new(cfg.task_path)
+        .arg("_get")
+        .arg("rc.context")
+        .output()
+        .unwrap();
+    let context: String = String::from_utf8(output.stdout).unwrap();
+    if !context.is_empty() {
+        let text = format!("!!!WARNING: Context set to {}", context);
+        println!("{}", text.red())
     }
 }
 
