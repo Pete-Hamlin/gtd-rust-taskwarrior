@@ -32,7 +32,7 @@ struct ProjectListItem {
 #[clap(author, version, about, long_about = None)]
 struct Cli {
     // Command to run
-    command: String,
+    command: Option<String>,
     // Optional subcommand to work on
     subcommand: Option<String>,
 
@@ -55,17 +55,17 @@ fn main() {
     init_config();
     let args = Cli::parse();
 
-    if args.command.as_str().is_empty() {
-        list_projects(args)
-    } else {
-        match args.command.as_str() {
+    if let Some(command) = args.command.as_deref() {
+        match command {
             "init" => init_projects(),
             "add" => insert_project(args),
             "rm" => remove_project(args),
             "list" => list_projects(args),
             "reset" => reset_projects(),
-            _ => println!("Subcommand {} not found", args.command),
+            _ => println!("Subcommand {} not found", command),
         }
+    } else {
+        list_projects(args)
     }
 }
 
@@ -193,7 +193,7 @@ fn check_context() {
         .output()
         .unwrap();
     let context: String = String::from_utf8(output.stdout).unwrap();
-    if !context.is_empty() {
+    if !context.trim().is_empty() {
         let text = format!("!!!WARNING: Context set to {}", context);
         println!("{}", text.red())
     }
