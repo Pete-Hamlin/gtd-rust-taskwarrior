@@ -1,10 +1,10 @@
-# rust-gtd-taskwarrior
+# gtd-rust-taskwarrior
 
 A small wrapper CLI app to assist with using taskwarrior for the GTD methodology. Written in rust
 
 ## Justification - Why does this exist?
 
-[Taskwarrior]() is a great tool for support the [gtd]() methodology, with great support form the following features:
+[Taskwarrior](https://taskwarrior.org/) is a great tool for support the [gtd](https://gettingthingsdone.com/) methodology, with great support form the following features:
 - A next task list (with priority)
 - Tickle folder/tasks
 - Someday/maybe lists
