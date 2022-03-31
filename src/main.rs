@@ -59,6 +59,7 @@ fn main() {
         match command {
             "init" => init_projects(),
             "list" => list_projects(args),
+            "add" => insert_project(args),
             "reset" => reset_projects(),
             _ => parse_subcommand(args),
         }
@@ -70,8 +71,7 @@ fn main() {
 fn parse_subcommand(args: Cli) {
     if let Some(subcommand) = args.subcommand.as_deref() {
         match subcommand {
-            "add" => insert_project(args),
-            "rm" => remove_project(args),
+            "done" => remove_project(args),
             _ => println!("Subcommand {} not found", subcommand),
         }
     } else {
@@ -119,8 +119,8 @@ fn init_projects() -> () {
 }
 
 fn insert_project(args: Cli) -> () {
-    if let Some(command) = args.command.as_deref() {
-        match add_project_item(command.to_string()) {
+    if let Some(subcommand) = args.subcommand.as_deref() {
+        match add_project_item(subcommand.to_string()) {
             Ok(_p) => println!("Successfully processed project"),
             Err(e) => println!("Failed to add project {:?}", e),
         }
