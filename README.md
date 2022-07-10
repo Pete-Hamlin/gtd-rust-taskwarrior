@@ -25,16 +25,21 @@ However certain aspects of the methodology I find are not as easy to interact wi
 `gtd-rust 1.0.0` will provide support for the following:
 
  - [ ] Have an easily customisable CLI interface to adapt to changing use cases
- - [ ] Keep a separate inventory to taskwarrior for active projects 
-    - [ ] Assign an ID for each active project
-    - [ ]Provide a method to import tasks from taskwarrior via `gtd project import`
- - [ ] Provide a method to manually add tasks to the active projects via `gtd project add <PROJECT>` 
- - Provide a method to implement a taskwarrior hook to add projects to the inventory via `gtd init`
+ - [x] Keep a separate inventory to taskwarrior for active projects 
+    - [x] Assign an ID for each active project
+    - [x]Provide a method to import tasks from taskwarrior via `gtd init`
+ - [x] Provide a method to manually add tasks to the active projects via `gtd add <PROJECT>` 
+ - [ ] Provide a method to implement a taskwarrior hook to add projects to the inventory via `gtd hooks`
  - [ ] Provide an easy review process for **all** current projects via `gtd project review`
      - [ ] Assign next actions for those that do not currently have them  - [ ] mark finished projects as completed.
      - [ ] Provide  a `--quick` quick option, to only review projects without a `next` action
-    - [ ] Provide a `--list` option to only display a list of currently active projects for review
-- [ ] Provide closing command for open projects via `gtd project <ID> done`
+    - [x] Provide a `--short` option to only display a list of currently active projects for review
+- [x] Provide closing command for open projects via `gtd <ID> done`
+
+Additional considerations:
+- [ ] If context is not `none either:
+  - [x] Warn the user with regards to currently set context
+  - [ ] Switch context to none for duration of the command, then revert back
 
 ## Assumptions
 
