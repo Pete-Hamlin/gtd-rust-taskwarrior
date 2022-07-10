@@ -31,14 +31,18 @@ struct ProjectListItem {
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)]
 struct Cli {
-    // Command to run
+    /// Command to run
     command: Option<String>,
-    // Optional subcommand to work on
+    /// Optional subcommand to work on
     subcommand: Option<String>,
 
-    // Display only projects without tasks
+    /// Display only projects without tasks
     #[clap(short, long)]
     short: bool,
+
+    /// Do not switch context during operation
+    #[clap(short, long)]
+    nosetcontext: bool,
 }
 
 impl ::std::default::Default for GtdConfig {
@@ -118,6 +122,7 @@ fn init_projects() -> () {
         .for_each(|x| add_project_item(x.to_string()).unwrap());
 }
 
+// Add/Remove projects
 fn insert_project(args: Cli) -> () {
     if let Some(subcommand) = args.subcommand.as_deref() {
         match add_project_item(subcommand.to_string()) {
@@ -169,8 +174,44 @@ fn write_project_list(projects: &Vec<Project>) -> io::Result<()> {
     Ok(())
 }
 
+// Context
+fn get_context() -> String {
+    let cfg: GtdConfig = confy::load("gtd-rust").expect("Failed to load config");
+    let output = Command::new(cfg.task_path)
+        .arg("_get")
+        .arg("rc.context")
+        .output()
+        .unwrap();
+    let context: String = String::from_utf8(output.stdout).unwrap();
+    return context;
+}
+
+fn check_context(context: String) {
+    if !context.trim().is_empty() {
+        let text = format!("!!!WARNING: Context set to {}", context);
+        println!("{}", text.red())
+    }
+}
+
+fn set_context(context: String) {
+    let cfg: GtdConfig = confy::load("gtd-rust").expect("Failed to load config");
+    let text = format!("Setting context to {}", context);
+    Command::new(cfg.task_path)
+        .arg("context")
+        .arg(context)
+        .output()
+        .expect("Failed to set context");
+    println!("{}", text);
+}
+
+// Project listing
 fn list_projects(args: Cli) -> () {
-    check_context();
+    let context = get_context();
+    if args.nosetcontext {
+        check_context(context.clone());
+    } else {
+        set_context("none".to_string());
+    }
     let projects = get_projects_list();
     let mut output = vec![];
     for (index, project) in projects.iter().enumerate() {
@@ -193,19 +234,8 @@ fn list_projects(args: Cli) -> () {
             println!("{}", text.green());
         }
     }
-}
-
-fn check_context() {
-    let cfg: GtdConfig = confy::load("gtd-rust").expect("Failed to load config");
-    let output = Command::new(cfg.task_path)
-        .arg("_get")
-        .arg("rc.context")
-        .output()
-        .unwrap();
-    let context: String = String::from_utf8(output.stdout).unwrap();
-    if !context.trim().is_empty() {
-        let text = format!("!!!WARNING: Context set to {}", context);
-        println!("{}", text.red())
+    if !args.nosetcontext {
+        set_context(context.to_string());
     }
 }
 

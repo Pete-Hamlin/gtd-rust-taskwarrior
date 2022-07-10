@@ -20,6 +20,18 @@ However certain aspects of the methodology I find are not as easy to interact wi
 - I have had a burning desire to try and write something in rust for some time
 
 
+## Installation/Usage
+
+This project is currently in pre-release status, so please treat accordingly. That being said, if you still want to try it out, run the following from the root of the repo:
+
+```
+cargo build --release
+```
+
+From there copy `./target/release/gtd` to somewhere within your `$PATH`. Then simply invoke the command using `gtd`.
+
+Once I'm satisfied with the base level behaviour, I hope to publish via cargo to make installation easier.
+
 ## Specification
 
 `gtd-rust 1.0.0` will provide support for the following:
