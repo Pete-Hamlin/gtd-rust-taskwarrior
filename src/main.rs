@@ -85,7 +85,7 @@ fn parse_subcommand(args: Cli) {
 
 fn init_config() {
     // Allows for running tasks on initial loading of config
-    let cfg: GtdConfig = confy::load("gtd-rust").expect("Failed to load config");
+    let cfg: GtdConfig = confy::load("gtd-rust", None).expect("Failed to load config");
     if !cfg.initialized {
         println!("Attempting to find task in $PATH...");
         // Check if `task` in current path
@@ -96,10 +96,10 @@ fn init_config() {
         let storage_path = env::var("HOME").unwrap() + "/.task/projects.data";
         let new_cfg = GtdConfig {
             task_path: "task".into(),
-            storage_path: storage_path,
+            storage_path,
             initialized: true,
         };
-        confy::store("gtd-rust", new_cfg).expect("Failed to load new config");
+        confy::store("gtd-rust", None, new_cfg).expect("Failed to load new config");
     }
 }
 
@@ -109,7 +109,7 @@ fn reset_projects() {
 }
 
 fn init_projects() -> () {
-    let cfg: GtdConfig = confy::load("gtd-rust").expect("Failed to load config");
+    let cfg: GtdConfig = confy::load("gtd-rust", None).expect("Failed to load config");
     let output = Command::new(cfg.task_path)
         .arg("_unique")
         .arg("project")
@@ -162,27 +162,27 @@ fn remove_project_item(project_id: String) -> io::Result<String> {
 }
 
 fn get_projects_list() -> Vec<Project> {
-    let cfg: GtdConfig = confy::load("gtd-rust").expect("Failed to load config");
+    let cfg: GtdConfig = confy::load("gtd-rust", None).expect("Failed to load config");
     let file = File::open(cfg.storage_path)
         .expect("Project storage file not found - Check your config location");
     return serde_json::from_reader(file).expect("Error reading file");
 }
 
 fn write_project_list(projects: &Vec<Project>) -> io::Result<()> {
-    let cfg: GtdConfig = confy::load("gtd-rust").expect("Failed to load config");
+    let cfg: GtdConfig = confy::load("gtd-rust", None).expect("Failed to load config");
     serde_json::to_writer(&File::create(cfg.storage_path)?, &projects)?;
     Ok(())
 }
 
 // Context
 fn get_context() -> String {
-    let cfg: GtdConfig = confy::load("gtd-rust").expect("Failed to load config");
+    let cfg: GtdConfig = confy::load("gtd-rust", None).expect("Failed to load config");
     let output = Command::new(cfg.task_path)
         .arg("_get")
         .arg("rc.context")
         .output()
         .unwrap();
-    let context: String = String::from_utf8(output.stdout).unwrap();
+    let context: String = String::from_utf8(output.stdout).unwrap().replace("\n", "");
     return context;
 }
 
@@ -194,14 +194,14 @@ fn check_context(context: String) {
 }
 
 fn set_context(context: String) {
-    let cfg: GtdConfig = confy::load("gtd-rust").expect("Failed to load config");
-    let text = format!("Setting context to {}", context);
+    let cfg: GtdConfig = confy::load("gtd-rust", None).expect("Failed to load config");
+    // let text = format!("Setting context to {}", context.clone());
     Command::new(cfg.task_path)
         .arg("context")
-        .arg(context)
-        .output()
+        .arg(context.to_string())
+        .status()
         .expect("Failed to set context");
-    println!("{}", text);
+    // println!("{}", output);
 }
 
 // Project listing
@@ -217,7 +217,7 @@ fn list_projects(args: Cli) -> () {
     for (index, project) in projects.iter().enumerate() {
         let count = project_count(project).unwrap();
         output.push(ProjectListItem {
-            index: index,
+            index,
             name: project.name.clone(),
             tasks: count,
         });
@@ -235,7 +235,7 @@ fn list_projects(args: Cli) -> () {
         }
     }
     if !args.nosetcontext {
-        set_context(context.to_string());
+        set_context(context);
     }
 }
 
@@ -251,7 +251,7 @@ fn check_duplicates(project_name: &str) -> bool {
 }
 
 fn project_count(project: &Project) -> io::Result<i32> {
-    let cfg: GtdConfig = confy::load("gtd-rust").expect("Failed to load config");
+    let cfg: GtdConfig = confy::load("gtd-rust", None).expect("Failed to load config");
     let mut text = "pro:".to_string();
     text = text + &project.name;
     let output = Command::new(cfg.task_path)
