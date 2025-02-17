@@ -155,44 +155,8 @@ fn write_project_list(projects: &Vec<Project>) -> io::Result<()> {
     Ok(())
 }
 
-// Context
-fn get_context() -> String {
-    let cfg: GtdConfig = confy::load("gtd-rust", None).expect("Failed to load config");
-    let output = Command::new(cfg.task_path)
-        .arg("_get")
-        .arg("rc.context")
-        .output()
-        .unwrap();
-    let context: String = String::from_utf8(output.stdout).unwrap().replace("\n", "");
-    return context;
-}
-
-fn check_context(context: String) {
-    if !context.trim().is_empty() {
-        let text = format!("!!!WARNING: Context set to {}", context);
-        println!("{}", text.red())
-    }
-}
-
-fn set_context(context: String) {
-    let cfg: GtdConfig = confy::load("gtd-rust", None).expect("Failed to load config");
-    // let text = format!("Setting context to {}", context.clone());
-    Command::new(cfg.task_path)
-        .arg("context")
-        .arg(context.to_string())
-        .status()
-        .expect("Failed to set context");
-    // println!("{}", output);
-}
-
 // Project listing
 fn list_projects(args: Cli) -> () {
-    let context = get_context();
-    if args.nosetcontext {
-        check_context(context.clone());
-    } else {
-        set_context("none".to_string());
-    }
     let projects = get_projects_list();
     let mut output = vec![];
     for (index, project) in projects.iter().enumerate() {
@@ -214,9 +178,6 @@ fn list_projects(args: Cli) -> () {
         } else if !args.short {
             println!("{}", text.green());
         }
-    }
-    if !args.nosetcontext {
-        set_context(context);
     }
 }
 
