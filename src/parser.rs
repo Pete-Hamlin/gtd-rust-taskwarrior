@@ -4,7 +4,7 @@ use std::error::Error;
 use std::process::Command;
 use std::str;
 
-use crate::Config;
+use crate::GtdConfig;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Task {
@@ -23,7 +23,7 @@ pub struct Task {
 }
 
 pub fn get_task_list() -> Result<Vec<Task>, Box<dyn Error>> {
-    let cfg: Config = confy::load("gtd-rust", None).expect("Failed to load config");
+    let cfg: GtdConfig = confy::load("gtd-rust", None).expect("Failed to load config");
     let tasks = parse_json_from_command::<Vec<Task>>(&cfg.task_path, &["export"])?;
     let filtered_tasks = tasks
         .into_iter()

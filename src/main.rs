@@ -1,4 +1,5 @@
 #![recursion_limit = "1024"]
+use std::error::Error;
 
 mod config;
 mod parser;
@@ -9,7 +10,7 @@ use parser::{get_task_list, Task};
 use clap::Parser;
 use colored::*;
 use serde::{Deserialize, Serialize};
-use std::fs::File;
+use std::fs::{remove_file, File};
 use std::io;
 use std::process::Command;
 
@@ -29,15 +30,15 @@ fn main() {
     let args = Cli::parse();
     let cfg = init_config(&args);
     let tasks = get_task_list().expect("Failed to get task list");
+    let mut projects = get_projects_list().expect("Failed to retrieve project list");
 
     if let Some(command) = args.command.as_deref() {
         match command {
-            "init" => init_projects(&cfg),
-            "list" => list_projects(&args, &cfg),
-            "add" => insert_project(&args),
-            "reset" => reset_projects(),
-            "test" => reset_projects(),
-            _ => parse_subcommand(&args),
+            "init" => init_projects(&tasks),
+            "list" => list_projects(&args, &cfg, &projects),
+            "add" => insert_project(&args, &mut projects),
+            "reset" => reset_projects(&cfg),
+            _ => parse_subcommand(&args, &mut projects),
         }
     } else {
         // list_projects(args)
@@ -58,10 +59,22 @@ fn test_task_list(tasks: &Vec<Task>) {
     });
 }
 
-fn parse_subcommand(args: &Cli) {
+fn parse_subcommand(args: &Cli, projects: &mut Vec<Project>) {
+    // If we have subcommands, command should be a project ID, which is an an integer
+    let id: usize = args
+        .command
+        .clone()
+        .expect("ID incorrect format, check gtd --help for correct syntax")
+        .parse::<usize>()
+        .unwrap();
+    if id > projects.len() {
+        println!("No project found with ID {:?}", id.to_string());
+        return;
+    }
     if let Some(subcommand) = args.subcommand.as_deref() {
         match subcommand {
-            "done" => remove_project(args),
+            "done" => mark_item_as_done(id, projects),
+            "delete" => delete_item(id, projects),
             _ => println!("Subcommand {} not found", subcommand),
         }
     } else {
@@ -69,79 +82,86 @@ fn parse_subcommand(args: &Cli) {
     }
 }
 
-fn reset_projects() {
-    let empty_vec = vec![];
-    write_project_list(&empty_vec).unwrap();
+fn reset_projects(cfg: &GtdConfig) {
+    remove_file(&cfg.storage_path).expect("Error removing config file.")
 }
 
-fn init_projects(cfg: &GtdConfig) -> () {
-    let output = Command::new(&cfg.task_path)
-        .arg("_unique")
-        .arg("project")
-        .output()
-        .expect("Command failed- check task binary");
+fn init_projects(tasks: &Vec<Task>) -> () {
+    let mut name_list: Vec<String> = vec![];
+    let mut projects: Vec<Project> = vec![];
+    tasks.into_iter().for_each(|task| {
+        let project_name = task.project.clone().unwrap();
+        if !name_list.contains(&project_name) {
+            update_project_entry(task, &project_name, &mut projects);
+            name_list.push(project_name);
+        }
+    });
+    write_project_list(&mut projects);
+}
 
-    String::from_utf8(output.stdout)
-        .unwrap()
-        .lines()
-        .for_each(|x| add_project_item(x.to_string()).unwrap());
+fn update_project_entry(task: &Task, proj_name: &str, projects: &mut Vec<Project>) -> () {
+    println!("{:?}", proj_name);
 }
 
 // Add/Remove projects
-fn insert_project(args: &Cli) -> () {
+fn insert_project(args: &Cli, projects: &mut Vec<Project>) -> () {
     if let Some(subcommand) = args.subcommand.as_deref() {
-        match add_project_item(subcommand.to_string()) {
+        match add_project_item(subcommand.to_string(), projects) {
             Ok(_p) => println!("Successfully processed project"),
             Err(e) => println!("Failed to add project {:?}", e),
         }
     } else {
-        println!("No project specified - Please provide a project name or run gtd --help for more details")
+        println!("No task specified - please see gtd --help on running this command")
     }
 }
 
-fn remove_project(args: &Cli) -> () {
-    if let Some(command) = args.command.as_deref() {
-        match remove_project_item(command.to_string()) {
-            Ok(p) => println!("Successfully removed project {:?}", p),
-            Err(e) => println!("Failed to remove project {:?}", e),
-        }
-    } else {
-        println!("No project specified - Please provide a project name or run gtd --help for more details")
+fn mark_item_as_done(proj_id: usize, projects: &mut Vec<Project>) -> () {
+    match remove_project_item(proj_id, projects) {
+        Ok(p) => println!("Successfully removed project {:?}", p),
+        Err(e) => println!("Failed to remove project {:?}", e),
     }
 }
 
-fn add_project_item(project: String) -> io::Result<()> {
-    let mut projects = get_projects_list();
-    if check_duplicates(&project) {
-        projects.push(Project { name: project });
-        write_project_list(&projects)?;
+fn delete_item(proj_id: usize, projects: &mut Vec<Project>) -> () {
+    match remove_project_item(proj_id, projects) {
+        Ok(p) => println!("Successfully removed project {:?}", p),
+        Err(e) => println!("Failed to remove project {:?}", e),
     }
+}
+fn add_project_item(project: String, projects: &mut Vec<Project>) -> io::Result<()> {
+    projects.push(Project { name: project });
+    write_project_list(projects)?;
     Ok(())
 }
 
-fn remove_project_item(project_id: String) -> io::Result<String> {
-    let mut projects = get_projects_list();
-    let project = projects.remove(project_id.parse::<usize>().unwrap());
-    write_project_list(&projects)?;
+fn remove_project_item(
+    project_id: usize,
+    projects: &mut Vec<Project>,
+) -> Result<String, Box<dyn Error>> {
+    let project = projects.remove(project_id);
+    write_project_list(projects)?;
     Ok(project.name)
 }
 
-fn get_projects_list() -> Vec<Project> {
+fn get_projects_list() -> Result<Vec<Project>, Box<dyn Error>> {
     let cfg: GtdConfig = confy::load("gtd-rust", None).expect("Failed to load config");
     let file = File::open(cfg.storage_path)
         .expect("Project storage file not found - Check your config location");
-    return serde_json::from_reader(file).expect("Error reading file");
+    let projects: Vec<Project> = match serde_json::from_reader(file) {
+        Ok(projects) => projects,
+        Err(_) => vec![],
+    };
+    Ok(projects)
 }
 
-fn write_project_list(projects: &Vec<Project>) -> io::Result<()> {
+fn write_project_list(projects: &mut Vec<Project>) -> io::Result<()> {
     let cfg: GtdConfig = confy::load("gtd-rust", None).expect("Failed to load config");
     serde_json::to_writer(&File::create(cfg.storage_path)?, &projects)?;
     Ok(())
 }
 
 // Project listing
-fn list_projects(_: &Cli, cfg: &GtdConfig) -> () {
-    let projects = get_projects_list();
+fn list_projects(_: &Cli, cfg: &GtdConfig, projects: &Vec<Project>) -> () {
     let mut output = vec![];
     for (index, project) in projects.iter().enumerate() {
         let count = project_count(project).unwrap();
@@ -163,17 +183,6 @@ fn list_projects(_: &Cli, cfg: &GtdConfig) -> () {
             println!("{}", text.green());
         }
     }
-}
-
-fn check_duplicates(project_name: &str) -> bool {
-    let projects = get_projects_list();
-    for project in projects.iter() {
-        if project_name == project.name {
-            println!("{} already in project list - skipping", project_name);
-            return false;
-        }
-    }
-    return true;
 }
 
 fn project_count(project: &Project) -> io::Result<i32> {

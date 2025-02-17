@@ -6,7 +6,7 @@ use std::process::Command;
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)]
 pub struct Cli {
-    /// Command to run (init, list, add, reset)
+    /// Command to run (init, list, add, reset or a project ID)
     pub command: Option<String>,
     /// Optional subcommand to work on
     pub subcommand: Option<String>,
