@@ -1,7 +1,11 @@
 #![recursion_limit = "1024"]
 
 mod config;
+mod parser;
+
 use config::init_config;
+use parser::{get_task_list, Task};
+
 use clap::Parser;
 use colored::*;
 use serde::{Deserialize, Serialize};
@@ -66,11 +70,18 @@ fn main() {
             "list" => list_projects(args),
             "add" => insert_project(args),
             "reset" => reset_projects(),
+            "test" => reset_projects(),
             _ => parse_subcommand(args),
         }
     } else {
-        list_projects(args)
+        // list_projects(args)
+        test_task_list()
     }
+}
+
+fn test_task_list() {
+    let tasks = get_task_list().expect("Failed to get task list");
+    tasks.into_iter().for_each(|task| println!("{:?}", task));
 }
 
 fn parse_subcommand(args: Cli) {
