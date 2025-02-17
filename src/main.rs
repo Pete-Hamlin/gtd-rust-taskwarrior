@@ -3,7 +3,7 @@
 mod config;
 mod parser;
 
-use config::init_config;
+use config::{init_config, Cli, GtdConfig};
 use parser::{get_task_list, Task};
 
 use clap::Parser;
@@ -12,14 +12,6 @@ use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io;
 use std::process::Command;
-
-// Config setup
-#[derive(Serialize, Deserialize)]
-struct GtdConfig {
-    initialized: bool,
-    storage_path: String,
-    task_path: String,
-}
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -33,58 +25,40 @@ struct ProjectListItem {
     tasks: i32,
 }
 
-#[derive(Parser)]
-#[clap(author, version, about, long_about = None)]
-struct Cli {
-    /// Command to run
-    command: Option<String>,
-    /// Optional subcommand to work on
-    subcommand: Option<String>,
-
-    /// Display only projects without tasks
-    #[clap(short, long)]
-    short: bool,
-
-    /// Do not switch context during operation
-    #[clap(short, long)]
-    nosetcontext: bool,
-}
-
-impl ::std::default::Default for GtdConfig {
-    fn default() -> Self {
-        Self {
-            initialized: false,
-            task_path: "task".into(),
-            storage_path: "./projects.json".into(),
-        }
-    }
-}
-
 fn main() {
-    init_config();
     let args = Cli::parse();
+    let cfg = init_config(&args);
+    let tasks = get_task_list().expect("Failed to get task list");
 
     if let Some(command) = args.command.as_deref() {
         match command {
-            "init" => init_projects(),
-            "list" => list_projects(args),
-            "add" => insert_project(args),
+            "init" => init_projects(&cfg),
+            "list" => list_projects(&args, &cfg),
+            "add" => insert_project(&args),
             "reset" => reset_projects(),
             "test" => reset_projects(),
-            _ => parse_subcommand(args),
+            _ => parse_subcommand(&args),
         }
     } else {
         // list_projects(args)
-        test_task_list()
+        test_task_list(&tasks)
     }
 }
 
-fn test_task_list() {
-    let tasks = get_task_list().expect("Failed to get task list");
-    tasks.into_iter().for_each(|task| println!("{:?}", task));
+fn test_task_list(tasks: &Vec<Task>) {
+    tasks.into_iter().for_each(|task| {
+        println!(
+            "{:?}: {:?} - {:?}\n",
+            task.id,
+            task.description,
+            task.project
+                .clone()
+                .expect("Something went wrong with project parsing!")
+        )
+    });
 }
 
-fn parse_subcommand(args: Cli) {
+fn parse_subcommand(args: &Cli) {
     if let Some(subcommand) = args.subcommand.as_deref() {
         match subcommand {
             "done" => remove_project(args),
@@ -100,9 +74,8 @@ fn reset_projects() {
     write_project_list(&empty_vec).unwrap();
 }
 
-fn init_projects() -> () {
-    let cfg: GtdConfig = confy::load("gtd-rust", None).expect("Failed to load config");
-    let output = Command::new(cfg.task_path)
+fn init_projects(cfg: &GtdConfig) -> () {
+    let output = Command::new(&cfg.task_path)
         .arg("_unique")
         .arg("project")
         .output()
@@ -115,7 +88,7 @@ fn init_projects() -> () {
 }
 
 // Add/Remove projects
-fn insert_project(args: Cli) -> () {
+fn insert_project(args: &Cli) -> () {
     if let Some(subcommand) = args.subcommand.as_deref() {
         match add_project_item(subcommand.to_string()) {
             Ok(_p) => println!("Successfully processed project"),
@@ -126,7 +99,7 @@ fn insert_project(args: Cli) -> () {
     }
 }
 
-fn remove_project(args: Cli) -> () {
+fn remove_project(args: &Cli) -> () {
     if let Some(command) = args.command.as_deref() {
         match remove_project_item(command.to_string()) {
             Ok(p) => println!("Successfully removed project {:?}", p),
@@ -167,7 +140,7 @@ fn write_project_list(projects: &Vec<Project>) -> io::Result<()> {
 }
 
 // Project listing
-fn list_projects(args: Cli) -> () {
+fn list_projects(_: &Cli, cfg: &GtdConfig) -> () {
     let projects = get_projects_list();
     let mut output = vec![];
     for (index, project) in projects.iter().enumerate() {
@@ -186,7 +159,7 @@ fn list_projects(args: Cli) -> () {
         );
         if item.tasks == 0 {
             println!("{}", text.yellow());
-        } else if !args.short {
+        } else if !cfg.short {
             println!("{}", text.green());
         }
     }
