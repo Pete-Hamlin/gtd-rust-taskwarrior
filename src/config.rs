@@ -38,7 +38,7 @@ impl ::std::default::Default for GtdConfig {
 
 pub fn init_config(args: &Cli) -> GtdConfig {
     // Allows for running tasks on initial loading of config
-    let cfg: GtdConfig = confy::load("gtd-rust", None).expect("Failed to load config");
+    let cfg: GtdConfig = confy::load("projwarrior", None).expect("Failed to load config");
     if !cfg.initialized {
         println!("Attempting to find task in $PATH...");
         // Check if `task` in current path

@@ -30,7 +30,7 @@ fn main() {
     let args = Cli::parse();
     let cfg = init_config(&args);
     let tasks = get_task_list().expect("Failed to get task list");
-    let mut projects = get_projects_list().expect("Failed to retrieve project list");
+    let mut projects = get_projects_list(&cfg).expect("Failed to retrieve project list");
 
     if let Some(command) = args.command.as_deref() {
         match command {
@@ -143,9 +143,8 @@ fn remove_project_item(
     Ok(project.name)
 }
 
-fn get_projects_list() -> Result<Vec<Project>, Box<dyn Error>> {
-    let cfg: GtdConfig = confy::load("gtd-rust", None).expect("Failed to load config");
-    let file = File::open(cfg.storage_path)
+fn get_projects_list(cfg: &GtdConfig) -> Result<Vec<Project>, Box<dyn Error>> {
+    let file = File::open(&cfg.storage_path)
         .expect("Project storage file not found - Check your config location");
     let projects: Vec<Project> = match serde_json::from_reader(file) {
         Ok(projects) => projects,
@@ -161,10 +160,10 @@ fn write_project_list(projects: &mut Vec<Project>) -> io::Result<()> {
 }
 
 // Project listing
-fn list_projects(_: &Cli, cfg: &GtdConfig, projects: &Vec<Project>) -> () {
+fn list_projects(_: &Cli, cfg: &GtdConfig, tasks: &Vec<Task>, projects: &Vec<Project>) -> () {
     let mut output = vec![];
     for (index, project) in projects.iter().enumerate() {
-        let count = project_count(project).unwrap();
+        let count = project_count(cfg, tasks, &project.name).unwrap();
         output.push(ProjectListItem {
             index,
             name: project.name.clone(),
@@ -185,18 +184,6 @@ fn list_projects(_: &Cli, cfg: &GtdConfig, projects: &Vec<Project>) -> () {
     }
 }
 
-fn project_count(project: &Project) -> io::Result<i32> {
-    let cfg: GtdConfig = confy::load("gtd-rust", None).expect("Failed to load config");
-    let mut text = "pro:".to_string();
-    text = text + &project.name;
-    let output = Command::new(cfg.task_path)
-        .arg(text)
-        .arg("\\(status:waiting or status:pending\\)'")
-        .arg("count")
-        .output()?;
-    let value: String = String::from_utf8(output.stdout)
-        .unwrap()
-        .split_whitespace()
-        .collect();
-    Ok(value.parse::<i32>().unwrap())
+fn project_count(cfg: &GtdConfig, tasks: &Vec<Task>, project_title: &str) -> io::Result<i32> {
+    Ok()
 }
