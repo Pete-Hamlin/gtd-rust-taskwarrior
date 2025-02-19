@@ -12,7 +12,6 @@ use colored::*;
 use serde::{Deserialize, Serialize};
 use std::fs::{remove_file, File};
 use std::io;
-use std::process::Command;
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -35,18 +34,18 @@ fn main() {
     if let Some(command) = args.command.as_deref() {
         match command {
             "init" => init_projects(&tasks),
-            "list" => list_projects(&args, &cfg, &projects),
+            "list" => list_projects(&cfg, &tasks, &projects),
             "add" => insert_project(&args, &mut projects),
             "reset" => reset_projects(&cfg),
             _ => parse_subcommand(&args, &mut projects),
         }
     } else {
-        // list_projects(args)
-        test_task_list(&tasks)
+        list_projects(&cfg, &tasks, &projects)
+        // test_task_list(&tasks)
     }
 }
 
-fn test_task_list(tasks: &Vec<Task>) {
+fn test_task_list(tasks: &[Task]) {
     tasks.into_iter().for_each(|task| {
         println!(
             "{:?}: {:?} - {:?}\n",
@@ -86,7 +85,7 @@ fn reset_projects(cfg: &GtdConfig) {
     remove_file(&cfg.storage_path).expect("Error removing config file.")
 }
 
-fn init_projects(tasks: &Vec<Task>) -> () {
+fn init_projects(tasks: &[Task]) -> () {
     let mut name_list: Vec<String> = vec![];
     let mut projects: Vec<Project> = vec![];
     tasks.into_iter().for_each(|task| {
@@ -160,10 +159,10 @@ fn write_project_list(projects: &mut Vec<Project>) -> io::Result<()> {
 }
 
 // Project listing
-fn list_projects(_: &Cli, cfg: &GtdConfig, tasks: &Vec<Task>, projects: &Vec<Project>) -> () {
+fn list_projects(cfg: &GtdConfig, tasks: &[Task], projects: &[Project]) -> () {
     let mut output = vec![];
     for (index, project) in projects.iter().enumerate() {
-        let count = project_count(cfg, tasks, &project.name).unwrap();
+        let count = project_count(tasks, &project.name).unwrap();
         output.push(ProjectListItem {
             index,
             name: project.name.clone(),
@@ -184,6 +183,10 @@ fn list_projects(_: &Cli, cfg: &GtdConfig, tasks: &Vec<Task>, projects: &Vec<Pro
     }
 }
 
-fn project_count(cfg: &GtdConfig, tasks: &Vec<Task>, project_title: &str) -> io::Result<i32> {
-    Ok()
+fn project_count(tasks: &[Task], project_title: &str) -> Result<i32, Box<dyn Error>> {
+    let count = tasks
+        .into_iter()
+        .filter(|t| t.project.clone().expect("Error reading project on task") == project_title)
+        .count();
+    Ok(count as i32)
 }
