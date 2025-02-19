@@ -19,7 +19,6 @@ pub struct Cli {
 // Config setup
 #[derive(Serialize, Deserialize)]
 pub struct GtdConfig {
-    pub initialized: bool,
     pub storage_path: String,
     pub task_path: String,
     pub short: bool,
@@ -28,32 +27,27 @@ pub struct GtdConfig {
 impl ::std::default::Default for GtdConfig {
     fn default() -> Self {
         Self {
-            initialized: false,
-            task_path: "task".into(),
-            storage_path: "./projects.json".into(),
+            task_path: get_task_bin(),
+            storage_path: env::var("HOME").unwrap() + "/.task/projects.data",
             short: true,
         }
     }
 }
 
-pub fn init_config(args: &Cli) -> GtdConfig {
-    // Allows for running tasks on initial loading of config
+fn get_task_bin() -> String {
+    // Check if `task` in current path
+    let task_bin = Command::new("which").arg("task").output().expect(
+        "Failed to find task binary - please ensure the `task` command is available in your $PATH",
+    );
+    return String::from_utf8(task_bin.stdout).unwrap();
+}
+
+pub fn get_config(args: &Cli) -> GtdConfig {
+    // Load config
     let cfg: GtdConfig = confy::load("projwarrior", None).expect("Failed to load config");
-    if !cfg.initialized {
-        println!("Attempting to find task in $PATH...");
-        // Check if `task` in current path
-        Command::new("which")
-            .arg("task")
-            .status()
-            .expect("Failed to find task binary - please ensure the `task` command is available in your $PATH");
-        let storage_path = env::var("HOME").unwrap() + "/.task/projects.data";
-        let new_cfg = GtdConfig {
-            task_path: "task".into(),
-            storage_path,
-            initialized: true,
-            short: args.short,
-        };
-        confy::store("projwarrior", None, new_cfg).expect("Failed to load new config");
-    }
-    return cfg;
+    // Overwrite config file with CLI options
+    return GtdConfig {
+        short: args.short,
+        ..cfg
+    };
 }

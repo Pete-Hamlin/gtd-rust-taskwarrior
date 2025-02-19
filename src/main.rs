@@ -4,7 +4,7 @@ use std::error::Error;
 mod config;
 mod parser;
 
-use config::{init_config, Cli, GtdConfig};
+use config::{get_config, Cli, GtdConfig};
 use parser::{get_task_list, Task};
 
 use clap::Parser;
@@ -17,6 +17,7 @@ use std::io;
 #[serde(rename_all = "camelCase")]
 struct Project {
     name: String,
+    // tags: Option<Vec<String>>,
 }
 
 struct ProjectListItem {
@@ -27,8 +28,8 @@ struct ProjectListItem {
 
 fn main() {
     let args = Cli::parse();
-    let cfg = init_config(&args);
-    let tasks = get_task_list().expect("Failed to get task list");
+    let cfg = get_config(&args);
+    let tasks = get_task_list(&cfg).expect("Failed to get task list");
     let mut projects = get_projects_list(&cfg).expect("Failed to retrieve project list");
 
     if let Some(command) = args.command.as_deref() {
@@ -37,28 +38,14 @@ fn main() {
             "list" => list_projects(&cfg, &tasks, &projects),
             "add" => insert_project(&args, &mut projects),
             "reset" => reset_projects(&cfg),
-            _ => parse_subcommand(&args, &mut projects),
+            _ => parse_subcommand(&args, &tasks, &mut projects),
         }
     } else {
         list_projects(&cfg, &tasks, &projects)
-        // test_task_list(&tasks)
     }
 }
 
-fn test_task_list(tasks: &[Task]) {
-    tasks.into_iter().for_each(|task| {
-        println!(
-            "{:?}: {:?} - {:?}\n",
-            task.id,
-            task.description,
-            task.project
-                .clone()
-                .expect("Something went wrong with project parsing!")
-        )
-    });
-}
-
-fn parse_subcommand(args: &Cli, projects: &mut Vec<Project>) {
+fn parse_subcommand(args: &Cli, tasks: &[Task], projects: &mut Vec<Project>) {
     // If we have subcommands, command should be a project ID, which is an an integer
     let id: usize = args
         .command
@@ -77,8 +64,16 @@ fn parse_subcommand(args: &Cli, projects: &mut Vec<Project>) {
             _ => println!("Subcommand {} not found", subcommand),
         }
     } else {
-        println!("Please provide a valid subcommand");
+        show_project(&projects, &tasks, id);
     }
+}
+
+fn show_project(projects: &[Project], tasks: &[Task], project_id: usize) {
+    let project = &projects[project_id];
+    // let tasks = tasks
+    //     .into_iter()
+    //     .filter(|t| t.project == project.name)
+    //     .collect();
 }
 
 fn reset_projects(cfg: &GtdConfig) {

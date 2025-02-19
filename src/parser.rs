@@ -22,8 +22,7 @@ pub struct Task {
     pub urgency: f64,
 }
 
-pub fn get_task_list() -> Result<Vec<Task>, Box<dyn Error>> {
-    let cfg: GtdConfig = confy::load("gtd-rust", None).expect("Failed to load config");
+pub fn get_task_list(cfg: &GtdConfig) -> Result<Vec<Task>, Box<dyn Error>> {
     let tasks = parse_json_from_command::<Vec<Task>>(&cfg.task_path, &["export"])?;
     let filtered_tasks = tasks
         .into_iter()
