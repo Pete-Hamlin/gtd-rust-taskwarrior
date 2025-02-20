@@ -16,6 +16,7 @@ confy = { version = "0.6.0" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 colored = "2"
+comfy-table = "7.1.4"
 
 
 [profile.release]
@@ -23,3 +24,6 @@ lto = true        # Enable link-time optimization
 codegen-units = 1 # Reduce number of codegen units to increase optimizations
 panic = 'abort'   # Abort on panic
 strip = true      # Strip symbols from binary*
+
+[dev-dependencies]
+tempfile = "3.17.1"

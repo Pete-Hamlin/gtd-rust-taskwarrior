@@ -3,12 +3,13 @@ use std::error::Error;
 
 mod config;
 mod parser;
+mod table;
 
 use config::{get_config, Cli, GtdConfig};
 use parser::{get_task_list, Task};
+use table::project_list;
 
 use clap::Parser;
-use colored::*;
 use serde::{Deserialize, Serialize};
 use std::fs::{remove_file, File};
 use std::io;
@@ -20,12 +21,6 @@ struct Project {
     // tags: Option<Vec<String>>,
 }
 
-struct ProjectListItem {
-    index: usize,
-    name: String,
-    tasks: i32,
-}
-
 fn main() {
     let args = Cli::parse();
     let cfg = get_config(&args);
@@ -35,13 +30,13 @@ fn main() {
     if let Some(command) = args.command.as_deref() {
         match command {
             "init" => init_projects(&tasks),
-            "list" => list_projects(&cfg, &tasks, &projects),
+            "list" => project_list(&cfg, &tasks, &projects),
             "add" => insert_project(&args, &mut projects),
             "reset" => reset_projects(&cfg),
             _ => parse_subcommand(&args, &tasks, &mut projects),
         }
     } else {
-        list_projects(&cfg, &tasks, &projects)
+        project_list(&cfg, &tasks, &projects)
     }
 }
 
@@ -154,34 +149,26 @@ fn write_project_list(projects: &mut Vec<Project>) -> io::Result<()> {
 }
 
 // Project listing
-fn list_projects(cfg: &GtdConfig, tasks: &[Task], projects: &[Project]) -> () {
-    let mut output = vec![];
-    for (index, project) in projects.iter().enumerate() {
-        let count = project_count(tasks, &project.name).unwrap();
-        output.push(ProjectListItem {
-            index,
-            name: project.name.clone(),
-            tasks: count,
-        });
-    }
-    output.sort_by(|a, b| a.tasks.cmp(&b.tasks));
-    for item in output.iter() {
-        let text = format!(
-            "{} | {} - Has {} tasks remaining",
-            item.index, item.name, item.tasks
-        );
-        if item.tasks == 0 {
-            println!("{}", text.yellow());
-        } else if !cfg.short {
-            println!("{}", text.green());
-        }
-    }
-}
-
-fn project_count(tasks: &[Task], project_title: &str) -> Result<i32, Box<dyn Error>> {
-    let count = tasks
-        .into_iter()
-        .filter(|t| t.project.clone().expect("Error reading project on task") == project_title)
-        .count();
-    Ok(count as i32)
-}
+//fn list_projects(cfg: &GtdConfig, tasks: &[Task], projects: &[Project]) -> () {
+//    let mut output = vec![];
+//    for (index, project) in projects.iter().enumerate() {
+//        let count = project_count(tasks, &project.name).unwrap();
+//        output.push(ProjectListItem {
+//            index,
+//            name: project.name.clone(),
+//            tasks: count,
+//        });
+//    }
+//    output.sort_by(|a, b| a.tasks.cmp(&b.tasks));
+//    for item in output.iter() {
+//        let text = format!(
+//            "{} | {} - Has {} tasks remaining",
+//            item.index, item.name, item.tasks
+//        );
+//        if item.tasks == 0 {
+//            println!("{}", text.yellow());
+//        } else if !cfg.short {
+//            println!("{}", text.green());
+//        }
+//    }
+//}
