@@ -1,4 +1,5 @@
-use comfy_table::Table;
+use comfy_table::presets::NOTHING;
+use comfy_table::{Attribute, Cell, Color, Table};
 use std::error::Error;
 
 use crate::{config::GtdConfig, parser::Task, Project};
@@ -11,28 +12,49 @@ struct ProjectListItem {
 
 pub fn project_list(cfg: &GtdConfig, tasks: &[Task], projects: &[Project]) {
     let mut table = Table::new();
-    let mut output = vec![];
-    for (index, project) in projects.iter().enumerate() {
-        let count = project_count(tasks, &project.name).unwrap();
-        output.push(ProjectListItem {
-            index,
-            name: project.name.clone(),
-            tasks: count,
-        });
-    }
+    table.load_preset(NOTHING);
+    table.set_header(vec![
+        Cell::new("ID").add_attribute(Attribute::Underlined),
+        Cell::new("Name").add_attribute(Attribute::Underlined),
+        Cell::new("Tasks").add_attribute(Attribute::Underlined),
+    ]);
+    let mut output = generate_list(tasks, projects);
+
     output.sort_by(|a, b| a.tasks.cmp(&b.tasks));
-    for item in output.iter() {
+    for (index, item) in output.into_iter().enumerate() {
         if !cfg.short || item.tasks == 0 {
-            table.add_row(vec![
-                item.index.to_string(),
-                item.name.to_string(),
-                item.tasks.to_string(),
-            ]);
-        } else if !cfg.short {
+            if index % 2 == 0 {
+                table.add_row(vec![
+                    Cell::new(item.index.to_string()).bg(Color::Black),
+                    Cell::new(item.name.to_string()).bg(Color::Black),
+                    Cell::new(item.tasks.to_string()).bg(Color::Black),
+                ]);
+            } else {
+                table.add_row(vec![
+                    item.index.to_string(),
+                    item.name.to_string(),
+                    item.tasks.to_string(),
+                ]);
+            }
         }
     }
-    table.set_header(vec!["ID", "Name", "Tasks Remaining"]);
     println!("{table}");
+}
+
+fn generate_list(tasks: &[Task], projects: &[Project]) -> Vec<ProjectListItem> {
+    let result: Vec<ProjectListItem> = projects
+        .iter()
+        .enumerate()
+        .map(|(index, project)| {
+            let count = project_count(tasks, &project.name).unwrap();
+            return ProjectListItem {
+                index,
+                name: project.name.clone(),
+                tasks: count,
+            };
+        })
+        .collect();
+    return result;
 }
 
 fn project_count(tasks: &[Task], project_title: &str) -> Result<i32, Box<dyn Error>> {
