@@ -3,40 +3,34 @@ use std::error::Error;
 
 mod config;
 mod parser;
+mod project;
 mod table;
 
 use config::{get_config, Cli, GtdConfig};
 use parser::{get_task_list, Task};
-use table::project_list;
+use project::{generate_project_list, get_projects, Project};
+use table::display_project_list;
 
 use clap::Parser;
-use serde::{Deserialize, Serialize};
 use std::fs::{remove_file, File};
 use std::io;
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct Project {
-    name: String,
-    // tags: Option<Vec<String>>,
-}
 
 fn main() {
     let args = Cli::parse();
     let cfg = get_config(&args);
     let tasks = get_task_list(&cfg).expect("Failed to get task list");
-    let mut projects = get_projects_list(&cfg).expect("Failed to retrieve project list");
+    let mut projects = get_projects(&cfg).expect("Failed to retrieve project list");
 
     if let Some(command) = args.command.as_deref() {
         match command {
             "init" => init_projects(&tasks),
-            "list" => project_list(&cfg, &tasks, &projects),
-            "add" => insert_project(&args, &mut projects),
+            "list" => list_projects(&cfg, &tasks, &projects),
+            "add" => add_project(&args, &mut projects),
             "reset" => reset_projects(&cfg),
             _ => parse_subcommand(&args, &tasks, &mut projects),
         }
     } else {
-        project_list(&cfg, &tasks, &projects)
+        list_projects(&cfg, &tasks, &projects)
     }
 }
 
@@ -63,18 +57,6 @@ fn parse_subcommand(args: &Cli, tasks: &[Task], projects: &mut Vec<Project>) {
     }
 }
 
-fn show_project(projects: &[Project], tasks: &[Task], project_id: usize) {
-    let project = &projects[project_id];
-    // let tasks = tasks
-    //     .into_iter()
-    //     .filter(|t| t.project == project.name)
-    //     .collect();
-}
-
-fn reset_projects(cfg: &GtdConfig) {
-    remove_file(&cfg.storage_path).expect("Error removing config file.")
-}
-
 fn init_projects(tasks: &[Task]) -> () {
     let mut name_list: Vec<String> = vec![];
     let mut projects: Vec<Project> = vec![];
@@ -88,12 +70,29 @@ fn init_projects(tasks: &[Task]) -> () {
     write_project_list(&mut projects);
 }
 
+fn list_projects(cfg: &GtdConfig, tasks: &[Task], projects: &[Project]) {
+    let project_list = generate_project_list(tasks, projects);
+    display_project_list(cfg, tasks, &project_list);
+}
+
+fn reset_projects(cfg: &GtdConfig) {
+    remove_file(&cfg.storage_path).expect("Error removing config file.")
+}
+
+fn show_project(projects: &[Project], tasks: &[Task], project_id: usize) {
+    let project = &projects[project_id];
+    // let tasks = tasks
+    //     .into_iter()
+    //     .filter(|t| t.project == project.name)
+    //     .collect();
+}
+
 fn update_project_entry(task: &Task, proj_name: &str, projects: &mut Vec<Project>) -> () {
     println!("{:?}", proj_name);
 }
 
 // Add/Remove projects
-fn insert_project(args: &Cli, projects: &mut Vec<Project>) -> () {
+fn add_project(args: &Cli, projects: &mut Vec<Project>) -> () {
     if let Some(subcommand) = args.subcommand.as_deref() {
         match add_project_item(subcommand.to_string(), projects) {
             Ok(_p) => println!("Successfully processed project"),
@@ -130,16 +129,6 @@ fn remove_project_item(
     let project = projects.remove(project_id);
     write_project_list(projects)?;
     Ok(project.name)
-}
-
-fn get_projects_list(cfg: &GtdConfig) -> Result<Vec<Project>, Box<dyn Error>> {
-    let file = File::open(&cfg.storage_path)
-        .expect("Project storage file not found - Check your config location");
-    let projects: Vec<Project> = match serde_json::from_reader(file) {
-        Ok(projects) => projects,
-        Err(_) => vec![],
-    };
-    Ok(projects)
 }
 
 fn write_project_list(projects: &mut Vec<Project>) -> io::Result<()> {

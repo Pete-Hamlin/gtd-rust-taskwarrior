@@ -2,15 +2,9 @@ use comfy_table::presets::NOTHING;
 use comfy_table::{Attribute, Cell, Color, Table};
 use std::error::Error;
 
-use crate::{config::GtdConfig, parser::Task, Project};
+use crate::{config::GtdConfig, parser::Task, project::ProjectListItem};
 
-struct ProjectListItem {
-    index: usize,
-    name: String,
-    tasks: i32,
-}
-
-pub fn project_list(cfg: &GtdConfig, tasks: &[Task], projects: &[Project]) {
+pub fn display_project_list(cfg: &GtdConfig, tasks: &[Task], projects: &[ProjectListItem]) {
     let mut table = Table::new();
     table.load_preset(NOTHING);
     table.set_header(vec![
@@ -41,7 +35,7 @@ pub fn project_list(cfg: &GtdConfig, tasks: &[Task], projects: &[Project]) {
     println!("{table}");
 }
 
-fn generate_list(tasks: &[Task], projects: &[Project]) -> Vec<ProjectListItem> {
+fn generate_list(tasks: &[Task], projects: &[ProjectListItem]) -> Vec<ProjectListItem> {
     let result: Vec<ProjectListItem> = projects
         .iter()
         .enumerate()
