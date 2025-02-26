@@ -12,6 +12,8 @@ pub struct Project {
     // tags: Option<Vec<String>>,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ProjectListItem {
     pub index: usize,
     pub name: String,
@@ -58,7 +60,7 @@ fn task_count(tasks: &[Task], project_title: &str) -> Result<i32, Box<dyn Error>
     Ok(count as i32)
 }
 
-fn write_project_list(cfg: &GtdConfig, projects: &mut Vec<ProjectListItem>) -> io::Result<()> {
-    serde_json::to_writer(&File::create(cfg.storage_path)?, &projects)?;
+pub fn write_project_list(cfg: &GtdConfig, projects: &[Project]) -> Result<(), Box<dyn Error>> {
+    serde_json::to_writer(&File::create(&cfg.storage_path)?, &projects)?;
     Ok(())
 }
