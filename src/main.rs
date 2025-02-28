@@ -9,11 +9,10 @@ mod table;
 use config::{get_config, Cli, GtdConfig};
 use parser::{get_task_list, Task};
 use project::{generate_project_list, get_projects, write_project_list, Project};
-use table::display_project_list;
+use table::{project_details_table, project_list_table};
 
 use clap::Parser;
 use std::fs::remove_file;
-use std::io;
 
 fn main() {
     let args = Cli::parse();
@@ -35,7 +34,7 @@ fn main() {
     }
 }
 
-fn parse_subcommand(_cfg: &GtdConfig, args: &Cli, tasks: &[Task], projects: &mut Vec<Project>) {
+fn parse_subcommand(cfg: &GtdConfig, args: &Cli, tasks: &[Task], projects: &mut Vec<Project>) {
     // If we have subcommands, command should be a project ID, which is an an integer
     let id: usize = args
         .command
@@ -51,11 +50,11 @@ fn parse_subcommand(_cfg: &GtdConfig, args: &Cli, tasks: &[Task], projects: &mut
         match subcommand {
             "done" => mark_project_done(id, projects),
             "delete" => delete_item(id, projects),
-            "show" => show_project(id, projects, tasks),
+            "show" => show_project(cfg, id, projects, tasks),
             _ => println!("Subcommand {} not found", subcommand),
         }
     } else {
-        show_project(id, projects, tasks);
+        show_project(cfg, id, projects, tasks);
     }
 }
 
@@ -68,12 +67,14 @@ fn init_projects(cfg: &GtdConfig, tasks: &[Task]) -> () {
         }
     });
     let projects: Vec<Project> = name_list.into_iter().map(|name| Project { name }).collect();
-    write_project_list(cfg, &projects);
+    match write_project_list(cfg, &projects) {
+        Ok(_p) => println!("Successfully initialized new project list"),
+        Err(e) => println!("Failed to write project list: {:?}", e),
+    }
 }
 
 fn list_projects(cfg: &GtdConfig, tasks: &[Task], projects: &[Project]) {
-    let project_list = generate_project_list(tasks, projects);
-    display_project_list(cfg, tasks, &project_list);
+    project_list_table(cfg, tasks, &projects);
 }
 
 fn count_projects(cfg: &GtdConfig, tasks: &[Task], projects: &[Project]) {
@@ -90,28 +91,35 @@ fn count_projects(cfg: &GtdConfig, tasks: &[Task], projects: &[Project]) {
 }
 
 fn reset_projects(cfg: &GtdConfig) {
-    remove_file(&cfg.storage_path).expect("Error removing config file.")
-}
-
-fn show_project(project_id: usize, projects: &[Project], _tasks: &[Task]) {
-    let _project = &projects[project_id];
-    // let tasks = tasks
-    //     .into_iter()
-    //     .filter(|t| t.project == project.name)
-    //     .collect();
-}
-
-// Add/Remove projects
-fn add_project(args: &Cli, projects: &mut Vec<Project>) -> () {
-    if let Some(subcommand) = args.subcommand.as_deref() {
-        match add_project_item(subcommand.to_string(), projects) {
-            Ok(_p) => println!("Successfully processed project"),
-            Err(e) => println!("Failed to add project {:?}", e),
-        }
-    } else {
-        println!("No task specified - run `proj --help` for guidance on running this command")
+    remove_file(&cfg.storage_path).expect("Error removing config file.");
+    let projects: Vec<Project> = vec![];
+    match write_project_list(cfg, &projects) {
+        Ok(_p) => println!("Successfully reset project list"),
+        Err(e) => println!("Failed to write project list: {:?}", e),
     }
 }
+
+fn show_project(cfg: &GtdConfig, project_id: usize, projects: &[Project], tasks: &[Task]) {
+    let project = &projects[project_id];
+    let project_tasks: Vec<Task> = tasks
+        .iter()
+        .filter(|t| t.project.as_deref() == Some(&project.name))
+        .cloned()
+        .collect();
+
+    project_details_table(cfg, project, &project_tasks);
+}
+
+// fn add_project(args: &Cli, projects: &mut Vec<Project>) -> () {
+//     if let Some(subcommand) = args.subcommand.as_deref() {
+//         match add_project_item(subcommand.to_string(), projects) {
+//             Ok(_p) => println!("Successfully processed project"),
+//             Err(e) => println!("Failed to add project {:?}", e),
+//         }
+//     } else {
+//         println!("No task specified - run `proj --help` for guidance on running this command")
+//     }
+// }
 
 fn mark_project_done(proj_id: usize, projects: &mut Vec<Project>) -> () {
     match remove_project_item(proj_id, projects) {
@@ -125,10 +133,6 @@ fn delete_item(proj_id: usize, projects: &mut Vec<Project>) -> () {
         Ok(p) => println!("Successfully removed project {:?}", p),
         Err(e) => println!("Failed to remove project {:?}", e),
     }
-}
-fn add_project_item(project: String, projects: &mut Vec<Project>) -> io::Result<()> {
-    projects.push(Project { name: project });
-    Ok(())
 }
 
 fn remove_project_item(

@@ -1,18 +1,13 @@
 use comfy_table::presets::NOTHING;
 use comfy_table::{Attribute, Cell, Color, Table};
-use std::error::Error;
 
-use crate::{config::GtdConfig, parser::Task, project::ProjectListItem};
+use crate::project::{generate_project_list, Project};
+use crate::{config::GtdConfig, parser::Task};
 
-pub fn display_project_list(cfg: &GtdConfig, tasks: &[Task], projects: &[ProjectListItem]) {
-    let mut table = Table::new();
-    table.load_preset(NOTHING);
-    table.set_header(vec![
-        Cell::new("ID").add_attribute(Attribute::Underlined),
-        Cell::new("Name").add_attribute(Attribute::Underlined),
-        Cell::new("Tasks").add_attribute(Attribute::Underlined),
-    ]);
-    let mut output = generate_list(tasks, projects);
+pub fn project_list_table(cfg: &GtdConfig, tasks: &[Task], projects: &[Project]) {
+    let headers = vec!["ID", "Name", "Tasks"];
+    let mut table = create_table(&headers);
+    let mut output = generate_project_list(tasks, projects);
 
     output.sort_by(|a, b| a.tasks.cmp(&b.tasks));
     for (index, item) in output.into_iter().enumerate() {
@@ -35,26 +30,46 @@ pub fn display_project_list(cfg: &GtdConfig, tasks: &[Task], projects: &[Project
     println!("{table}");
 }
 
-fn generate_list(tasks: &[Task], projects: &[ProjectListItem]) -> Vec<ProjectListItem> {
-    let result: Vec<ProjectListItem> = projects
-        .iter()
-        .enumerate()
-        .map(|(index, project)| {
-            let count = project_count(tasks, &project.name).unwrap();
-            return ProjectListItem {
-                index,
-                name: project.name.clone(),
-                tasks: count,
-            };
-        })
-        .collect();
-    return result;
+pub fn project_details_table(cfg: &GtdConfig, project: &Project, tasks: &[Task]) {
+    let headers = vec!["Name", "Value"];
+    let mut table = create_table(&headers);
+    table.add_row(vec![Cell::new("Name"), Cell::new(&project.name)]);
+
+    println!("{table}");
+    task_list_table(cfg, tasks);
 }
 
-fn project_count(tasks: &[Task], project_title: &str) -> Result<i32, Box<dyn Error>> {
-    let count = tasks
-        .into_iter()
-        .filter(|t| t.project.clone().expect("Error reading project on task") == project_title)
-        .count();
-    Ok(count as i32)
+fn task_list_table(_cfg: &GtdConfig, tasks: &[Task]) {
+    let headers = vec!["ID", "Entry", "Description", "Tags"];
+    let mut table = create_table(&headers);
+    for (index, item) in tasks.into_iter().enumerate() {
+        if index % 2 == 0 {
+            table.add_row(vec![
+                Cell::new(item.id.to_string()).bg(Color::Black),
+                Cell::new(item.entry.to_string()).bg(Color::Black),
+                Cell::new(item.description.to_string()).bg(Color::Black),
+                Cell::new(item.tags.clone().unwrap_or(vec![]).join(", ")).bg(Color::Black),
+            ]);
+        } else {
+            table.add_row(vec![
+                item.id.to_string(),
+                item.entry.to_string(),
+                item.description.to_string(),
+                item.tags.clone().unwrap_or(vec![]).join(", "),
+            ]);
+        }
+    }
+    println!("{table}");
+}
+
+fn create_table(headers: &[&str]) -> Table {
+    let mut table = Table::new();
+    table.load_preset(NOTHING);
+    let table_headers: Vec<Cell> = headers
+        .iter()
+        .map(|header| Cell::new(header).add_attribute(Attribute::Underlined))
+        .collect();
+
+    table.set_header(table_headers);
+    return table;
 }

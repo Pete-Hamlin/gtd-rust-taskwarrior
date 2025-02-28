@@ -6,7 +6,7 @@ use std::str;
 
 use crate::GtdConfig;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Task {
     pub id: i32,
     pub brainpower: Option<String>,
