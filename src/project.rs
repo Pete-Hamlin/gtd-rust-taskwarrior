@@ -30,7 +30,7 @@ pub fn get_projects(cfg: &GtdConfig) -> Result<Vec<Project>, Box<dyn Error>> {
     Ok(projects)
 }
 
-/// Converts the imported JSON `Project` struct to a `ProjectListItem`.
+/// Converts the imported JSON `Project` struct to a `ProjectListItem` (the data we wish to display).
 /// Currently attaches the following data:
 /// - Current pending task count
 ///

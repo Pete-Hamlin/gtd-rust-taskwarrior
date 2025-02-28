@@ -25,7 +25,7 @@ fn main() {
             "init" => init_projects(&cfg, &tasks),
             "list" => list_projects(&cfg, &tasks, &projects),
             "count" => count_projects(&cfg, &tasks, &projects),
-            // "add" => add_project(&args, &mut projects),
+            "add" => add_project(&cfg, &args, &mut projects),
             "reset" => reset_projects(&cfg),
             _ => parse_subcommand(&cfg, &args, &tasks, &mut projects),
         }
@@ -42,14 +42,14 @@ fn parse_subcommand(cfg: &GtdConfig, args: &Cli, tasks: &[Task], projects: &mut 
         .expect("ID incorrect format, check gtd --help for correct syntax")
         .parse::<usize>()
         .unwrap();
-    if id > projects.len() {
+    if id >= projects.len() {
         println!("No project found with ID {:?}", id.to_string());
         return;
     }
     if let Some(subcommand) = args.subcommand.as_deref() {
         match subcommand {
-            "done" => mark_project_done(id, projects),
-            "delete" => delete_item(id, projects),
+            // "done" => mark_project_done(id, projects),
+            "delete" => delete_item(cfg, id, projects),
             "show" => show_project(cfg, id, projects, tasks),
             _ => println!("Subcommand {} not found", subcommand),
         }
@@ -106,39 +106,38 @@ fn show_project(cfg: &GtdConfig, project_id: usize, projects: &[Project], tasks:
         .filter(|t| t.project.as_deref() == Some(&project.name))
         .cloned()
         .collect();
-
     project_details_table(cfg, project, &project_tasks);
 }
 
-// fn add_project(args: &Cli, projects: &mut Vec<Project>) -> () {
-//     if let Some(subcommand) = args.subcommand.as_deref() {
-//         match add_project_item(subcommand.to_string(), projects) {
-//             Ok(_p) => println!("Successfully processed project"),
-//             Err(e) => println!("Failed to add project {:?}", e),
-//         }
-//     } else {
-//         println!("No task specified - run `proj --help` for guidance on running this command")
-//     }
-// }
-
-fn mark_project_done(proj_id: usize, projects: &mut Vec<Project>) -> () {
-    match remove_project_item(proj_id, projects) {
-        Ok(p) => println!("Successfully removed project {:?}", p),
-        Err(e) => println!("Failed to remove project {:?}", e),
+fn add_project(cfg: &GtdConfig, args: &Cli, projects: &mut Vec<Project>) -> () {
+    if let Some(subcommand) = args.subcommand.as_deref() {
+        projects.push(Project {
+            name: subcommand.to_string(),
+        });
+        match write_project_list(cfg, projects) {
+            Ok(_p) => println!("Successfully processed project"),
+            Err(e) => println!("Failed to add project {:?}", e),
+        }
+    } else {
+        println!("No task specified - run `proj --help` for guidance on running this command")
     }
 }
 
-fn delete_item(proj_id: usize, projects: &mut Vec<Project>) -> () {
-    match remove_project_item(proj_id, projects) {
+// fn mark_project_done(proj_id: usize, projects: &mut Vec<Project>) -> () {}
+
+fn delete_item(cfg: &GtdConfig, proj_id: usize, projects: &mut Vec<Project>) -> () {
+    match remove_project_item(cfg, proj_id, projects) {
         Ok(p) => println!("Successfully removed project {:?}", p),
         Err(e) => println!("Failed to remove project {:?}", e),
     }
 }
 
 fn remove_project_item(
+    cfg: &GtdConfig,
     project_id: usize,
     projects: &mut Vec<Project>,
 ) -> Result<String, Box<dyn Error>> {
     let project = projects.remove(project_id);
+    write_project_list(cfg, projects)?;
     Ok(project.name)
 }
