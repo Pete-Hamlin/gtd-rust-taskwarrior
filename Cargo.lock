@@ -238,19 +238,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "gtd"
-version = "0.1.1"
-dependencies = [
- "clap",
- "colored",
- "comfy-table",
- "confy",
- "serde",
- "serde_json",
- "tempfile",
-]
-
-[[package]]
 name = "hashbrown"
 version = "0.15.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -370,6 +357,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "60946a68e5f9d28b0dc1c21bb8a97ee7d018a8b322fa57838ba31cc878e22d99"
 dependencies = [
  "unicode-ident",
+]
+
+[[package]]
+name = "proj"
+version = "0.1.1"
+dependencies = [
+ "clap",
+ "colored",
+ "comfy-table",
+ "confy",
+ "serde",
+ "serde_json",
+ "tempfile",
 ]
 
 [[package]]

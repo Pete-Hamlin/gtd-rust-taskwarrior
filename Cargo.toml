@@ -1,5 +1,5 @@
 [package]
-name = "gtd"
+name = "proj"
 description = "A CLI helper to ease using GTD projects with Taskwarrior"
 categories = ["command-line-interface"]
 license = "MIT"
