@@ -14,6 +14,10 @@ pub struct Cli {
     /// Display only projects without tasks
     #[clap(short, long)]
     pub short: bool,
+
+    /// Display output with color
+    #[clap(short, long)]
+    pub color: bool,
 }
 
 // Config setup
@@ -22,6 +26,7 @@ pub struct GtdConfig {
     pub storage_path: String,
     pub task_path: String,
     pub short: bool,
+    pub color: bool,
 }
 
 impl ::std::default::Default for GtdConfig {
@@ -30,6 +35,7 @@ impl ::std::default::Default for GtdConfig {
             task_path: get_task_bin(),
             storage_path: env::var("HOME").unwrap() + "/.task/projects.data",
             short: true,
+            color: true,
         }
     }
 }
@@ -48,6 +54,7 @@ pub fn get_config(args: &Cli) -> GtdConfig {
     // Overwrite config file with CLI options
     return GtdConfig {
         short: args.short,
+        color: args.color,
         ..cfg
     };
 }

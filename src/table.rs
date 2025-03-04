@@ -11,18 +11,23 @@ pub fn project_list_table(cfg: &GtdConfig, tasks: &[Task], projects: &[Project])
 
     output.sort_by(|a, b| a.tasks.cmp(&b.tasks));
     for (index, item) in output.into_iter().enumerate() {
+        let color = if cfg.color {
+            determine_proj_color(item.tasks as usize)
+        } else {
+            Color::Reset
+        };
         if !cfg.short || item.tasks == 0 {
             if index % 2 == 0 {
                 table.add_row(vec![
-                    Cell::new(item.index.to_string()).bg(Color::Black),
-                    Cell::new(item.name.to_string()).bg(Color::Black),
-                    Cell::new(item.tasks.to_string()).bg(Color::Black),
+                    Cell::new(item.index.to_string()).fg(color).bg(Color::Black),
+                    Cell::new(item.name.to_string()).fg(color).bg(Color::Black),
+                    Cell::new(item.tasks.to_string()).fg(color).bg(Color::Black),
                 ]);
             } else {
                 table.add_row(vec![
-                    item.index.to_string(),
-                    item.name.to_string(),
-                    item.tasks.to_string(),
+                    Cell::new(item.index.to_string()).fg(color),
+                    Cell::new(item.name.to_string()).fg(color),
+                    Cell::new(item.tasks.to_string()).fg(color),
                 ]);
             }
         }
@@ -33,10 +38,17 @@ pub fn project_list_table(cfg: &GtdConfig, tasks: &[Task], projects: &[Project])
 pub fn project_details_table(cfg: &GtdConfig, project: &Project, tasks: &[Task]) {
     let headers = vec!["Name", "Value"];
     let mut table = create_table(&headers);
-    table.add_row(vec![Cell::new("Name"), Cell::new(&project.name)]);
+    let color = if cfg.color {
+        determine_proj_color(tasks.len())
+    } else {
+        Color::Reset
+    };
+    table.add_row(vec![Cell::new("Name"), Cell::new(&project.name).fg(color)]);
 
     println!("{table}");
-    task_list_table(cfg, tasks);
+    if tasks.len() > 0 {
+        task_list_table(cfg, tasks);
+    }
 }
 
 fn task_list_table(_cfg: &GtdConfig, tasks: &[Task]) {
@@ -72,4 +84,12 @@ fn create_table(headers: &[&str]) -> Table {
 
     table.set_header(table_headers);
     return table;
+}
+
+fn determine_proj_color(task_count: usize) -> Color {
+    if task_count == 0 {
+        return Color::Yellow;
+    } else {
+        return Color::Green;
+    }
 }
