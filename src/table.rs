@@ -11,25 +11,24 @@ pub fn project_list_table(cfg: &GtdConfig, tasks: &[Task], projects: &[Project])
 
     output.sort_by(|a, b| a.tasks.cmp(&b.tasks));
     for (index, item) in output.into_iter().enumerate() {
+        // Set colors
         let color = if cfg.color {
             determine_proj_color(item.tasks as usize)
         } else {
             Color::Reset
         };
+        let bg_color = if cfg.color && index % 2 == 0 {
+            Color::Black
+        } else {
+            Color::Reset
+        };
+
         if !cfg.short || item.tasks == 0 {
-            if index % 2 == 0 {
-                table.add_row(vec![
-                    Cell::new(item.index.to_string()).fg(color).bg(Color::Black),
-                    Cell::new(item.name.to_string()).fg(color).bg(Color::Black),
-                    Cell::new(item.tasks.to_string()).fg(color).bg(Color::Black),
-                ]);
-            } else {
-                table.add_row(vec![
-                    Cell::new(item.index.to_string()).fg(color),
-                    Cell::new(item.name.to_string()).fg(color),
-                    Cell::new(item.tasks.to_string()).fg(color),
-                ]);
-            }
+            table.add_row(vec![
+                Cell::new(item.index.to_string()).fg(color).bg(bg_color),
+                Cell::new(item.name.to_string()).fg(color).bg(bg_color),
+                Cell::new(item.tasks.to_string()).fg(color).bg(bg_color),
+            ]);
         }
     }
     println!("{table}");
@@ -51,25 +50,21 @@ pub fn project_details_table(cfg: &GtdConfig, project: &Project, tasks: &[Task])
     }
 }
 
-fn task_list_table(_cfg: &GtdConfig, tasks: &[Task]) {
+fn task_list_table(cfg: &GtdConfig, tasks: &[Task]) {
     let headers = vec!["ID", "Entry", "Description", "Tags"];
     let mut table = create_table(&headers);
     for (index, item) in tasks.into_iter().enumerate() {
-        if index % 2 == 0 {
-            table.add_row(vec![
-                Cell::new(item.id.to_string()).bg(Color::Black),
-                Cell::new(item.entry.to_string()).bg(Color::Black),
-                Cell::new(item.description.to_string()).bg(Color::Black),
-                Cell::new(item.tags.clone().unwrap_or(vec![]).join(", ")).bg(Color::Black),
-            ]);
+        let bg_color = if cfg.color && index % 2 == 0 {
+            Color::Black
         } else {
-            table.add_row(vec![
-                item.id.to_string(),
-                item.entry.to_string(),
-                item.description.to_string(),
-                item.tags.clone().unwrap_or(vec![]).join(", "),
-            ]);
-        }
+            Color::Reset
+        };
+        table.add_row(vec![
+            Cell::new(item.id.to_string()).bg(bg_color),
+            Cell::new(item.entry.to_string()).bg(bg_color),
+            Cell::new(item.description.to_string()).bg(bg_color),
+            Cell::new(item.tags.clone().unwrap_or(vec![]).join(", ")).bg(bg_color),
+        ]);
     }
     println!("{table}");
 }
